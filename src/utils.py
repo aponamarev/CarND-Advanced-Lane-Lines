@@ -74,10 +74,15 @@ def warper(img, src=None, dst=None):
     :param img: input image
     :param src: rectangle coordinates for the source image
     :param dst: rectungle coordinates for the destination image
-    :return: warped image
+    :return: warped image and coordinate planes/rectangles (src, dst)
     """
     # Set img_size and transformation points
-    img_size = img.shape[:-1][::-1]
+    if len(img.shape)==3:
+        img_size = img.shape[:-1][::-1]
+    elif len(img.shape)==2:
+        img_size = img.shape[::-1]
+    else:
+        assert False, "Provided image has incorrect shape {}. Image expected to have 2 or 3 dimentions".format(img.shape)
     src = src or np.float32([[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
                              [((img_size[0] / 6) - 10), img_size[1]],
                              [(img_size[0] * 5 / 6) + 60, img_size[1]],
@@ -88,7 +93,12 @@ def warper(img, src=None, dst=None):
                              [(img_size[0] * 3 / 4), 0]])
     # Create a transformation matrix and warp the image
     M = cv2.getPerspectiveTransform(src, dst)
-    return cv2.warpPerspective(img, M, img_size)
+    return cv2.warpPerspective(img, M, img_size), (src, dst)
+
+def visualize_planes(img, plane):
+    for pt1, pt2 in zip(plane, np.roll(plane,1, axis=0)):
+        img = cv2.line(img, (pt1[0],pt1[1]), (pt2[0], pt2[1]), (255,0,0), thickness=3)
+    return img
 
 def main():
 
@@ -103,7 +113,9 @@ def main():
 
     img = cv2.cvtColor(cv2.imread(test_img_path), cv2.COLOR_BGR2RGB)
     img = cc.undistort(img)
-    warped_img = warper(img)
+    warped_img, (src, dst) = warper(img)
+    img = visualize_planes(img, src)
+    warped_img = visualize_planes(warped_img, dst)
 
     fig, (sub_plot1, sub_plot2) = plt.subplots(1,2, figsize=[20,6])
     sub_plot1.set_title("original")
