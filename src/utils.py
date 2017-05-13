@@ -65,3 +65,54 @@ def dir_threshold(img, kernel=3, thresh=(0, np.pi / 2)):
     mask[(absgraddir >= thresh[0]) & (absgraddir <= thresh[1])] = 1
     # 6) Return this mask as your binary_output image
     return np.uint8(mask)
+
+
+def warper(img, src=None, dst=None):
+    """
+    Warps an image input based on provided rectangle coordinates for the source image (src) and 
+    the destination image (dst)
+    :param img: input image
+    :param src: rectangle coordinates for the source image
+    :param dst: rectungle coordinates for the destination image
+    :return: warped image
+    """
+    # Set img_size and transformation points
+    img_size = img.shape[:-1][::-1]
+    src = src or np.float32([[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
+                             [((img_size[0] / 6) - 10), img_size[1]],
+                             [(img_size[0] * 5 / 6) + 60, img_size[1]],
+                             [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
+    dst = dst or np.float32([[(img_size[0] / 4), 0],
+                             [(img_size[0] / 4), img_size[1]],
+                             [(img_size[0] * 3 / 4), img_size[1]],
+                             [(img_size[0] * 3 / 4), 0]])
+    # Create a transformation matrix and warp the image
+    M = cv2.getPerspectiveTransform(src, dst)
+    return cv2.warpPerspective(img, M, img_size)
+
+def main():
+
+    from CameraCalibration import CameraCalibration as CC
+    from matplotlib import pyplot as plt
+
+    calibration_file_path = 'calibration.p'
+
+    test_img_path = '../test_images/test1.jpg'
+
+    cc = CC(calibration_file_path)
+
+    img = cv2.cvtColor(cv2.imread(test_img_path), cv2.COLOR_BGR2RGB)
+    img = cc.undistort(img)
+    warped_img = warper(img)
+
+    fig, (sub_plot1, sub_plot2) = plt.subplots(1,2, figsize=[20,6])
+    sub_plot1.set_title("original")
+    sub_plot1.imshow(img)
+    sub_plot2.set_title("warped")
+    sub_plot2.imshow(warped_img)
+
+    return True
+
+if __name__=="__main__":
+    main()
+
