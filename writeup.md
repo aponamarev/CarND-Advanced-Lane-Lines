@@ -60,7 +60,7 @@ Step b) consists of creating an CameraCalibration object and using this object t
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+I used a combination of color and gradient thresholds to generate a binary image (thresholding steps in code cells 5 and 6 in `advanced_paths_finding.ipynb`).  Here's an example of my output for this step.
 
 ![alt text][image3]
 
