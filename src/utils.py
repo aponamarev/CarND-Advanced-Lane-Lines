@@ -74,7 +74,7 @@ def warper(img, src=None, dst=None):
     :param img: input image
     :param src: rectangle coordinates for the source image
     :param dst: rectungle coordinates for the destination image
-    :return: warped image and coordinate planes/rectangles (src, dst)
+    :return: warped image
     """
     # Set img_size and transformation points
     if len(img.shape)==3:
@@ -83,10 +83,12 @@ def warper(img, src=None, dst=None):
         img_size = img.shape[::-1]
     else:
         assert False, "Provided image has incorrect shape {}. Image expected to have 2 or 3 dimentions".format(img.shape)
-    src = src or np.float32([[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
+    top_c_shift = 60
+    top_v_shift = 100
+    src = src or np.float32([[(img_size[0] / 2) - top_c_shift, img_size[1] / 2 + top_v_shift],
                              [((img_size[0] / 6) - 10), img_size[1]],
                              [(img_size[0] * 5 / 6) + 60, img_size[1]],
-                             [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
+                             [(img_size[0] / 2 + top_c_shift), img_size[1] / 2 + top_v_shift]])
     dst = dst or np.float32([[(img_size[0] / 4), 0],
                              [(img_size[0] / 4), img_size[1]],
                              [(img_size[0] * 3 / 4), img_size[1]],
@@ -95,10 +97,12 @@ def warper(img, src=None, dst=None):
     M = cv2.getPerspectiveTransform(src, dst)
     return cv2.warpPerspective(img, M, img_size), (src, dst)
 
+
 def visualize_planes(img, plane):
     for pt1, pt2 in zip(plane, np.roll(plane,1, axis=0)):
         img = cv2.line(img, (pt1[0],pt1[1]), (pt2[0], pt2[1]), (255,0,0), thickness=3)
     return img
+
 
 def main():
 
