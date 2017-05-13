@@ -66,16 +66,16 @@ class CameraCalibration(object):
             pickle.dump({"matrix": self._M, "coefficients": self._distort_coeff}, f)
 
 
-    def undistort(self, img, ā=0):
+    def undistort(self, img, alpha=0):
         """Returns undistorted image calibrated for camera calibration Matrix and distortion coefficients.
         By default - removes unwanted pixels. To recover full image with black pixes filled in for missing information
-        set ā=1.
+        set alpha=1.
         Reference: Camera Calibration — OpenCV 3.0.0-dev documentation. 2017. Camera Calibration — 
         OpenCV 3.0.0-dev documentation. [ONLINE] Available at: 
         http://docs.opencv.org/3.0-beta/doc/py_tutorials/py_calib3d/py_calibration/py_calibration.html. 
         [Accessed 11 May 2017]."""
         h, w = img.shape[:2]
-        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(self._M, self._distort_coeff, (w, h), ā, (w, h))
+        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(self._M, self._distort_coeff, (w, h), alpha, (w, h))
         # undistort
         return cv2.undistort(img, self._M, self._distort_coeff, None, newcameramtx)
 
@@ -103,6 +103,7 @@ def main():
             print("Image {} was processed successfully.".format(p))
         except:
             print("Incorrect image path: {}".format(p))
+
 
 if __name__=="__main__":
     main()
