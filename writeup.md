@@ -19,7 +19,7 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/undistort_output.png "Undistorted"
+[image1]: ./output_images/undistort_output.png "Undistorted"
 [image2]: ./output_images/calibrated_test_images.png "Road Transformed"
 [image3]: ./output_images/binary_image.png "Binary Example"
 [image4]: ./examples/warped_straight_lines.jpg "Warp Example"
@@ -57,6 +57,10 @@ I then used the output `objps` and `imgps` to compute the camera calibration and
 
 To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
 ![alt text][image2]
+
+Correction of image distortion (created by the camera) is done in 2 steps: a) calculate cameral matrix and distortion coefficients and b) undistort an image using statistics calculated in the step a.
+The first step was implemented in a utility class src/CameraCallibration.py. The script in aforementioned file processed all provided examples (chessboard images) and stored resulting stats in src/calibration.p. Therefore, in advanced_paths_finding.ipynb I focused on the step b).
+Step b) consists of creating an CameraCalibration object and using this object to undistort an image. The code for this step provided in 1 and 2 code cells of the book (advanced_paths_finding.ipynb).
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
