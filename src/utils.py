@@ -121,8 +121,10 @@ def find_window_centroids(image, window_width, window_height, margin):
     l_sum = np.sum(image[int(3 * image.shape[0] / 4):, :int(image.shape[1] / 2)], axis=0)
     # Calculate the center (x coordinate) for left lane
     l_center = np.argmax(np.convolve(window, l_sum)) - window_width / 2
+    #l_center = np.argmax(l_sum)
     r_sum = np.sum(image[int(3 * image.shape[0] / 4):, int(image.shape[1] / 2):], axis=0)
     r_center = np.argmax(np.convolve(window, r_sum)) - window_width / 2 + int(image.shape[1] / 2)
+    #r_center = np.argmax(r_sum) + int(image.shape[1] / 2)
 
     # Add what we found for the first layer
     window_centroids.append((l_center, r_center))
@@ -141,15 +143,19 @@ def find_window_centroids(image, window_width, window_height, margin):
 
         l_min_index = int(max(l_center + offset - margin, 0))
         l_max_index = int(min(l_center + offset + margin, image.shape[1]))
+        #l_min_index = int(max(l_center - margin, 0))
+        #l_max_index = int(min(l_center + margin, image.shape[1]))
         l_center = np.argmax(conv_signal[l_min_index:l_max_index]) + l_min_index - offset
+        #l_center = np.argmax(image_layer[l_min_index:l_max_index]) + l_min_index
         # Find the best right centroid by using past right center as a reference
         r_min_index = int(max(r_center + offset - margin, 0))
         r_max_index = int(min(r_center + offset + margin, image.shape[1]))
         r_center = np.argmax(conv_signal[r_min_index:r_max_index]) + r_min_index - offset
+        #r_center = np.argmax(image_layer[r_min_index:r_max_index]) + r_min_index
         # Add what we found for that layer
         window_centroids.append((l_center, r_center))
 
-    return window_centroids
+    return np.float32(window_centroids)
 
 def map_window(binary_warped_img, window_width=50, window_height=120, search_margin=100):
 
@@ -186,6 +192,33 @@ def map_window(binary_warped_img, window_width=50, window_height=120, search_mar
 
     return output, window_centroids
 
+def fit_polynomial(x, y_size, x_scaller=1.0, y_scaller=1.0, degree=2):
+
+    # Define y space
+    ploty = np.linspace(0, y_size-1, len(x))
+    ploty = ploty[::-1]
+
+    # Fit polynomial
+    return np.polyfit(ploty*y_scaller, x*x_scaller, degree)
+
+def plot_2nd_degree_polynomial(coefficients, y_size):
+
+    # Define y space
+    ploty = np.linspace(0, y_size - 1, y_size)
+    ploty = ploty[::-1]
+
+    # Build points
+    x = coefficients[0]*ploty**2 + coefficients[1]*ploty + coefficients[2]
+
+    return x, ploty
+
+def curvature(centroids, y_length, x_conv = 3.7 / 700, y_conv = 30 / 720):
+
+    # Fit polinomial
+    left_fit = fit_polynomial(centroids[:, 0], y_length)
+
+
+
 
 def main():
 
@@ -194,19 +227,19 @@ def main():
 
     calibration_file_path = 'calibration.p'
 
-    test_img_path = "../test_images/straight_lines1.jpg"
+    test_img_path = "../test_images/test3.jpg"
 
     cc = CC(calibration_file_path)
 
     img = cv2.cvtColor(cv2.imread(test_img_path), cv2.COLOR_BGR2RGB)
-    #img = cc.undistort(img)
+    img = cc.undistort(img)
 
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
     binary_img = abs_sobel_thresh(gray, thresh=(20,100))
 
-    top_c_shift = 29
-    top_v_shift = 80
+    top_c_shift = 39
+    top_v_shift = 85
 
     warped_img, (src, dst) = warper(img, top_c_shift = top_c_shift, top_v_shift = top_v_shift)
     img = visualize_planes(img, src)
@@ -236,6 +269,46 @@ def main():
     sub_plot1.imshow(binary_warped_img, cmap="gray")
     sub_plot2.set_title("maped")
     sub_plot2.imshow(mapped_binary)
+
+
+    # Fit polinomial
+    left_fit = fit_polynomial(centroids[:, 0], binary_warped_img.shape[0])
+    right_fit = fit_polynomial(centroids[:, 1], binary_warped_img.shape[0])
+    print("Left:", left_fit)
+    print("Right:", right_fit)
+
+    # Plot curves
+    left_x, left_y = plot_2nd_degree_polynomial(left_fit, binary_warped_img.shape[0])
+    right_x, right_y = plot_2nd_degree_polynomial(right_fit, binary_warped_img.shape[0])
+
+    plt.title("plotted curves")
+    plt.plot(left_x, left_y, 'o', color='red', linewidth=3)
+    plt.plot(right_x, right_y, 'o', color='blue', linewidth=3)
+    plt.xlim(0, 1280)
+    plt.ylim(0, 720)
+    plt.gca().invert_yaxis()
+
+    # Calculate radius of curvature
+    # R(f(y)) = (1+f(y)'^2)^(2/3) / |f(y)''|, where:
+    # f(y) = A*y^2 + B*y + C
+    # f(y)' = 2Ay + B
+    # f(y)'' = 2A
+    # Therefore:
+    # R(f(y)) = (1+(2Ay+B)^2)^(2/3) / |2A|
+
+    R = lambda M, y: (1+(2*M[0]*y+M[1])**2)**(2/3) / np.abs(2*M[0])
+
+    x_scaller = 3.7 / 580
+    y_scaller = 8.5*3 / 720
+
+    left_fit = fit_polynomial(centroids[:, 0], binary_warped_img.shape[0], x_scaller=x_scaller, y_scaller=y_scaller)
+    right_fit = fit_polynomial(centroids[:, 1], binary_warped_img.shape[0], x_scaller=x_scaller, y_scaller=y_scaller)
+
+    left_curve_rad = R(left_fit, left_y).mean()
+    right_curve_rad = R(right_fit, right_y).mean()
+
+    print("Left radius in meters: {:.1f}".format(left_curve_rad))
+    print("Right radius in meters: {:.1f}".format(right_curve_rad))
 
     return True
 
