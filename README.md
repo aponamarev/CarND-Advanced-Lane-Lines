@@ -90,26 +90,26 @@ In order to detect lane pixels I applied a sliding window method. Sliding window
 
 The method of finding centroids described in map_window method of src/utils.py
 
-To calculate the curvature I applied the formula below:
-R(f(y)) = (1+f(y)'^2)^(2/3) / |f(y)''|, where:
-f(y) = Ay^2 + By + C
-f(y)' = 2Ay + B
-f(y)'' = 2A
-Therefore:
-R(f(y)) = (1+(2Ay+B)^2)^(2/3) / |2A|
-
 The results are presented below:
 
 ![alt text][image5]
-
-Left radius in meters: 546.2
-Right radius in meters: 564.5
 
 The code presented in code cells 11 and 12 of `advanced_paths_finding.ipynb`
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+To calculate the curvature I applied the formula below:
+
+R(f(y)) = (1+f(y)'^2)^(2/3) / |f(y)''|, where:
+* f(y) = Ay^2 + By + C
+* f(y)' = 2Ay + B f(y)'' = 2A
+
+Therefore: R(f(y)) = (1+(2Ay+B)^2)^(2/3) / |2A|
+
+Left radius in meters: 546.2
+Right radius in meters: 564.5
+
+The code presented in code cells 12 of `advanced_paths_finding.ipynb`
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
