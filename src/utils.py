@@ -183,8 +183,9 @@ def map_window(binary_warped_img, window_width=50, window_height=120, search_mar
         template = np.array(cv2.merge((zero_channel, template, zero_channel)), np.uint8)  # make window pixels green
         warpage = np.array(cv2.merge((binary_warped_img, binary_warped_img, binary_warped_img)),
                            np.uint8)  # making the original road pixels 3 color channels
-        output = cv2.addWeighted(warpage, 1, template, 0.5,
-                                 0.0)  # overlay the orignal road image with window results
+        # overlay the original road image with window results
+        output = cv2.addWeighted(warpage, 1, template, 0.5, 0.0)
+
 
     # If no window centers found, just display orginal road image
     else:
@@ -236,12 +237,13 @@ def main():
 
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
-    binary_img = abs_sobel_thresh(gray, thresh=(20,100))
+    #binary_img = abs_sobel_thresh(gray, thresh=(20,100))
+    binary_img = mag_thresh(gray, thresh=(20,100))
 
     top_c_shift = 39
     top_v_shift = 85
 
-    warped_img, (src, dst) = warper(img, top_c_shift = top_c_shift, top_v_shift = top_v_shift)
+    warped_img, (src, dst) = warper(img, top_c_shift=top_c_shift, top_v_shift=top_v_shift)
     img = visualize_planes(img, src)
     warped_img = visualize_planes(warped_img, dst)
 
