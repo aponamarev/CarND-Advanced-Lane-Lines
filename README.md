@@ -17,7 +17,7 @@ The goals / steps of this project are the following:
 [image2]: ./output_images/calibrated_test_images.png "Road Transformed"
 [image3]: ./output_images/binary_image.png "Binary Example"
 [image4]: ./output_images/warped.png "Warp Example"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
+[image5]: ./output_images/curve.png "Curve"
 [image6]: ./examples/example_output.jpg "Output"
 [video1]: ./project_video.mp4 "Video"
 
@@ -86,9 +86,24 @@ I verified that my perspective transform was working as expected by drawing the 
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+In order to detect lane pixels I applied a sliding window method. Sliding window method divides the images into n windows. The maximum activations found in each window considered to be the centers of the lane or centorid. Therefore, binary active pixels sournding this centroid will be considered belonging to the lane.
+
+The method of finding centroids described in map_window method of src/utils.py
+
+To calculate the curvature I applied the formula below:
+R(f(y)) = (1+f(y)'^2)^(2/3) / |f(y)''|, where:
+f(y) = Ay^2 + By + C
+f(y)' = 2Ay + B
+f(y)'' = 2A
+Therefore:
+R(f(y)) = (1+(2Ay+B)^2)^(2/3) / |2A|
+
+The results are presented below:
 
 ![alt text][image5]
+
+Left radius in meters: 546.2
+Right radius in meters: 564.5
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
