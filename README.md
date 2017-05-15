@@ -105,6 +105,8 @@ The results are presented below:
 Left radius in meters: 546.2
 Right radius in meters: 564.5
 
+The code presented in code cells 11 and 12 of `advanced_paths_finding.ipynb`
+
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
 I did this in lines # through # in my code in `my_other_file.py`
