@@ -84,14 +84,14 @@ def warper(img, src=None, dst=None, top_c_shift = 45, top_v_shift = 90):
     else:
         assert False, "Provided image has incorrect shape {}. Image expected to have 2 or 3 dimentions".format(img.shape)
 
-    src = src or np.float32([[(img_size[0] / 2) - top_c_shift, img_size[1] / 2 + top_v_shift],
-                             [((img_size[0] / 6) - 10), img_size[1]],
-                             [(img_size[0] * 5 / 6) + 60, img_size[1]],
-                             [(img_size[0] / 2 + top_c_shift), img_size[1] / 2 + top_v_shift]])
-    dst = dst or np.float32([[(img_size[0] / 4), 0],
-                             [(img_size[0] / 4), img_size[1]],
-                             [(img_size[0] * 3 / 4), img_size[1]],
-                             [(img_size[0] * 3 / 4), 0]])
+    src = src if src is not None else np.float32([[(img_size[0] / 2) - top_c_shift, img_size[1] / 2 + top_v_shift],
+                                                 [((img_size[0] / 6) - 10), img_size[1]],
+                                                 [(img_size[0] * 5 / 6) + 60, img_size[1]],
+                                                 [(img_size[0] / 2 + top_c_shift), img_size[1] / 2 + top_v_shift]])
+    dst = dst if dst is not None else np.float32([[(img_size[0] / 4), 0],
+                                                 [(img_size[0] / 4), img_size[1]],
+                                                 [(img_size[0] * 3 / 4), img_size[1]],
+                                                 [(img_size[0] * 3 / 4), 0]])
     # Create a transformation matrix and warp the image
     M = cv2.getPerspectiveTransform(src, dst)
     return cv2.warpPerspective(img, M, img_size), (src, dst)
@@ -113,6 +113,7 @@ def window_mask(width, height, img_ref, center, level):
 def find_window_centroids(image, window_width, window_height, margin):
     window_centroids = []  # Store the (left,right) window centroid positions per level
     window = np.ones(window_width)  # Create our window template that we will use for convolutions
+    offset = window_width
 
     # First find the two starting positions for the left and right lane by using np.sum to get the vertical image slice
     # and then np.convolve the vertical image slice with the window template
@@ -120,16 +121,12 @@ def find_window_centroids(image, window_width, window_height, margin):
     # Sum quarter bottom of image to get slice, could use a different ratio
     l_sum = np.sum(image[int(3 * image.shape[0] / 4):, :int(image.shape[1] / 2)], axis=0)
     # Calculate the center (x coordinate) for left lane
-    l_center = np.argmax(np.convolve(window, l_sum)) - window_width / 2
-    #l_center = np.argmax(l_sum)
+    l_center = np.argmax(np.convolve(window, l_sum)) - offset
     r_sum = np.sum(image[int(3 * image.shape[0] / 4):, int(image.shape[1] / 2):], axis=0)
-    r_center = np.argmax(np.convolve(window, r_sum)) - window_width / 2 + int(image.shape[1] / 2)
-    #r_center = np.argmax(r_sum) + int(image.shape[1] / 2)
+    r_center = np.argmax(np.convolve(window, r_sum)) - offset + int(image.shape[1] / 2)
 
     # Add what we found for the first layer
     window_centroids.append((l_center, r_center))
-
-    offset = window_width / 2
 
     # Go through each layer looking for max pixel locations
     for level in range(1, (int)(image.shape[0] / window_height)):
@@ -137,25 +134,21 @@ def find_window_centroids(image, window_width, window_height, margin):
         image_layer = np.sum(
             image[int(image.shape[0] - (level + 1) * window_height):int(image.shape[0] - level * window_height), :],
             axis=0)
-        conv_signal = np.convolve(window, image_layer)
         # Find the best left centroid by using past left center as a reference
         # Use window_width/2 as offset because convolution signal reference is at right side of window, not center of window
+        conv_signal = np.convolve(window, image_layer)
 
-        l_min_index = int(max(l_center + offset - margin, 0))
-        l_max_index = int(min(l_center + offset + margin, image.shape[1]))
-        #l_min_index = int(max(l_center - margin, 0))
-        #l_max_index = int(min(l_center + margin, image.shape[1]))
+        l_min_index = int(max(l_center - margin, 0))
+        l_max_index = int(min(l_center + margin, image.shape[1]))
         l_center = np.argmax(conv_signal[l_min_index:l_max_index]) + l_min_index - offset
-        #l_center = np.argmax(image_layer[l_min_index:l_max_index]) + l_min_index
         # Find the best right centroid by using past right center as a reference
         r_min_index = int(max(r_center + offset - margin, 0))
         r_max_index = int(min(r_center + offset + margin, image.shape[1]))
         r_center = np.argmax(conv_signal[r_min_index:r_max_index]) + r_min_index - offset
-        #r_center = np.argmax(image_layer[r_min_index:r_max_index]) + r_min_index
         # Add what we found for that layer
         window_centroids.append((l_center, r_center))
 
-    return np.float32(window_centroids)
+    return np.int32(window_centroids)
 
 def map_window(binary_warped_img, window_width=50, window_height=120, search_margin=100):
 
@@ -219,6 +212,19 @@ def curvature(centroids, y_length, x_conv = 3.7 / 700, y_conv = 30 / 720):
     left_fit = fit_polynomial(centroids[:, 0], y_length)
 
 
+def visualize_lanes(warped, ploty, left_fitx, right_fitx):
+    # Create an image to draw the lines on
+    warp_zero = np.zeros_like(warped).astype(np.uint8)
+    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+    # Recast the x and y points into usable format for cv2.fillPoly()
+    pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+    pts = np.hstack((pts_left, pts_right))
+
+    # Draw the lane onto the warped blank image
+    cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+    return color_warp
 
 
 def main():
@@ -237,10 +243,10 @@ def main():
 
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
-    #binary_img = abs_sobel_thresh(gray, thresh=(20,100))
-    binary_img = mag_thresh(gray, thresh=(20,100))
+    binary_img = abs_sobel_thresh(gray, thresh=(20,100))
+    #binary_img = mag_thresh(gray, thresh=(20,100))
 
-    top_c_shift = 39
+    top_c_shift = 40
     top_v_shift = 85
 
     warped_img, (src, dst) = warper(img, top_c_shift=top_c_shift, top_v_shift=top_v_shift)
@@ -262,7 +268,7 @@ def main():
     sub_plot2.imshow(binary_warped_img, cmap="gray")
 
 
-    mapped_binary, centroids = map_window(binary_warped_img, 50, 120, 100)
+    mapped_binary, centroids = map_window(binary_warped_img, 50, 80, 100)
 
 
     # Display the final results
@@ -311,6 +317,20 @@ def main():
 
     print("Left radius in meters: {:.1f}".format(left_curve_rad))
     print("Right radius in meters: {:.1f}".format(right_curve_rad))
+
+    binary_filled = visualize_lanes(binary_warped_img, left_y, left_x, right_x)
+    unwarp_binary, (src, dst) = warper(binary_filled, src=dst, dst=src)
+    mapped_img = cv2.addWeighted(img, 1, unwarp_binary, 0.3, 0)
+
+    fig, p = plt.subplots(1,3, figsize=[20, 6])
+    p[0].set_title("binary_filled")
+    p[0].imshow(binary_filled)
+    p[1].set_title("unwarp_binary")
+    p[1].imshow(unwarp_binary)
+    p[2].set_title("mapped_img")
+    p[2].imshow(mapped_img)
+    fig.show()
+
 
     return True
 
