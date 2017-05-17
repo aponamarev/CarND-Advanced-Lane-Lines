@@ -18,7 +18,7 @@ The goals / steps of this project are the following:
 [image3]: ./output_images/binary_image.png "Binary Example"
 [image4]: ./output_images/warped.png "Warp Example"
 [image5]: ./output_images/curve.png "Curve"
-[image6]: ./examples/example_output.jpg "Output"
+[image6]: ./output_images/mapped_img.png "Output"
 [video1]: ./project_video.mp4 "Video"
 
 ---
