@@ -253,30 +253,32 @@ def main():
     img = visualize_planes(img, src)
     warped_img = visualize_planes(warped_img, dst)
 
+    """
     fig, (sub_plot1, sub_plot2) = plt.subplots(1,2, figsize=[20,6])
     sub_plot1.set_title("original")
     sub_plot1.imshow(img)
     sub_plot2.set_title("warped")
-    sub_plot2.imshow(warped_img)
+    sub_plot2.imshow(warped_img)"""
 
     binary_warped_img, (src, dst) = warper(binary_img, top_c_shift = top_c_shift, top_v_shift = top_v_shift)
-
+    """
     fig, (sub_plot1, sub_plot2) = plt.subplots(1, 2, figsize=[20, 6])
     sub_plot1.set_title("original")
     sub_plot1.imshow(binary_img, cmap="gray")
     sub_plot2.set_title("warped")
-    sub_plot2.imshow(binary_warped_img, cmap="gray")
+    sub_plot2.imshow(binary_warped_img, cmap="gray")"""
 
 
     mapped_binary, centroids = map_window(binary_warped_img, 50, 80, 100)
 
 
     # Display the final results
+    """
     fig, (sub_plot1, sub_plot2) = plt.subplots(1, 2, figsize=[20, 6])
     sub_plot1.set_title("warped")
     sub_plot1.imshow(binary_warped_img, cmap="gray")
     sub_plot2.set_title("maped")
-    sub_plot2.imshow(mapped_binary)
+    sub_plot2.imshow(mapped_binary)"""
 
 
     # Fit polinomial
@@ -289,12 +291,14 @@ def main():
     left_x, left_y = plot_2nd_degree_polynomial(left_fit, binary_warped_img.shape[0])
     right_x, right_y = plot_2nd_degree_polynomial(right_fit, binary_warped_img.shape[0])
 
+    """
     plt.title("plotted curves")
     plt.plot(left_x, left_y, 'o', color='red', linewidth=3)
     plt.plot(right_x, right_y, 'o', color='blue', linewidth=3)
     plt.xlim(0, 1280)
     plt.ylim(0, 720)
     plt.gca().invert_yaxis()
+    plt.show()"""
 
     # Calculate radius of curvature
     # R(f(y)) = (1+f(y)'^2)^(2/3) / |f(y)''|, where:
@@ -314,6 +318,7 @@ def main():
 
     left_curve_rad = R(left_fit, left_y).mean()
     right_curve_rad = R(right_fit, right_y).mean()
+    car_position = binary_warped_img.shape[1]/2-np.mean(centroids[0])
 
     print("Left radius in meters: {:.1f}".format(left_curve_rad))
     print("Right radius in meters: {:.1f}".format(right_curve_rad))
@@ -321,15 +326,15 @@ def main():
     binary_filled = visualize_lanes(binary_warped_img, left_y, left_x, right_x)
     unwarp_binary, (src, dst) = warper(binary_filled, src=dst, dst=src)
     mapped_img = cv2.addWeighted(img, 1, unwarp_binary, 0.3, 0)
+    cv2.putText(mapped_img, "Radius of curvature: {}m".format((left_curve_rad+right_curve_rad)//2),
+                (5, 30), cv2.FONT_HERSHEY_DUPLEX, 1, (255,255,255), thickness=1)
+    cv2.putText(mapped_img, "Vehicle is {:.1f}m {} of center".format(np.abs(car_position*x_scaller), "left" if car_position<0\
+        else "right"),
+                (int(mapped_img.shape[1]/2), 30), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255), thickness=1)
 
-    fig, p = plt.subplots(1,3, figsize=[20, 6])
-    p[0].set_title("binary_filled")
-    p[0].imshow(binary_filled)
-    p[1].set_title("unwarp_binary")
-    p[1].imshow(unwarp_binary)
-    p[2].set_title("mapped_img")
-    p[2].imshow(mapped_img)
-    fig.show()
+    plt.title("mapped_img")
+    plt.imshow(mapped_img)
+    plt.show()
 
 
     return True
