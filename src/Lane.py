@@ -8,7 +8,8 @@ import numpy as np
 
 class Lane(object):
     """ Class designed to track lanes"""
-    def __init__(self):
+    def __init__(self, name):
+        self.__name__=name
         # was the line detected in the last iteration?
         self.detected = False
         # x values of the last n fits of the line

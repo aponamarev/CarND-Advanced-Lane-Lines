@@ -135,7 +135,7 @@ def find_window_centroids(image, window_width, window_height, margin):
             image[int(image.shape[0] - (level + 1) * window_height):int(image.shape[0] - level * window_height), :],
             axis=0)
         # Find the best left centroid by using past left center as a reference
-        # Use window_width/2 as offset because convolution signal reference is at right side of window, not center of window
+        # Use _window_width/2 as offset because convolution signal reference is at right side of window, not center of window
         conv_signal = np.convolve(window, image_layer)
 
         l_min_index = int(max(l_center - margin, 0))
