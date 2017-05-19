@@ -13,7 +13,7 @@ R = lambda M, y: (1+(2*M[0]*y+M[1])**2)**(2/3) / np.abs(2*M[0])
 
 class APF(object):
     """Advanced_Path_Finding.py provides a class responsible for detection and visualization of lanes."""
-    def __init__(self, calibration_file_path = 'calibration.p', sobel_kernel=3, sobel_threshold=(20,100)):
+    def __init__(self, calibration_file_path = 'calibration.p', sobel_kernel=3, sobel_threshold=(20,100), frames=8):
         self._kernel = sobel_kernel
         self._thresh = sobel_threshold
         self._center_shift = 40
@@ -24,7 +24,7 @@ class APF(object):
         self._window_height = 80
         self._search_margin = 100
         self._cc = CC(calibration_file_path)
-        self._left_lane = Lane("_left_lane")
+        self._left_lane = Lane("_left_lane", frames=frames)
         self._right_lane = Lane("_right_lane")
 
     def detect(self, img):
@@ -42,8 +42,8 @@ class APF(object):
         self._left_lane.current_fit = fit_polynomial(centroids[:, 0], binary_warped_img.shape[0])
         self._right_lane.current_fit = fit_polynomial(centroids[:, 1], binary_warped_img.shape[0])
         # create curves describing lanes
-        self._left_lane.allx, self._left_lane.ally = plot_2nd_degree_polynomial(self._left_lane.current_fit, binary_warped_img.shape[0])
-        self._right_lane.allx, self._right_lane.ally = plot_2nd_degree_polynomial(self._right_lane.current_fit, binary_warped_img.shape[0])
+        self._left_lane.allx, self._left_lane.ally = plot_2nd_degree_polynomial(self._left_lane.best_fit, binary_warped_img.shape[0])
+        self._right_lane.allx, self._right_lane.ally = plot_2nd_degree_polynomial(self._right_lane.best_fit, binary_warped_img.shape[0])
         # Find fit in real-world coordinates
         left_fit = fit_polynomial(centroids[:, 0], binary_warped_img.shape[0],
                                   x_scaller=self._x_scaller,
@@ -53,7 +53,6 @@ class APF(object):
                                    y_scaller=self._y_scaller)
         self._left_lane.radius_of_curvature = R(left_fit, self._left_lane.ally).mean()
         self._right_lane.radius_of_curvature = R(right_fit, self._right_lane.ally).mean()
-        #self._left_lane.line_base_pos = binary_warped_img.shape[1]/2-np.mean(centroids[0])
         self._left_lane.line_base_pos = centroids[0][0]
         self._right_lane.line_base_pos = centroids[0][1]
         car_position = (binary_warped_img.shape[1] - self._left_lane.line_base_pos - self._right_lane.line_base_pos) / 2
@@ -73,19 +72,24 @@ def main():
 
     from matplotlib import pyplot as plt
 
-    test_img_path = "test_images/test3.jpg"
-    apf = APF(calibration_file_path='src/calibration.p')
+    test_img_path = ["test_images/test3.jpg","test_images/test2.jpg",
+                     "test_images/test1.jpg","test_images/test4.jpg",
+                     "test_images/test5.jpg","test_images/test6.jpg",
+                     "test_images/straight_lines1.jpg","test_images/straight_lines1.jpg"]
+    apf = APF(calibration_file_path='src/calibration.p', frames=2)
 
-    img = cv2.cvtColor(cv2.imread(test_img_path), cv2.COLOR_BGR2RGB)
+    for p in test_img_path:
 
-    mapped_img, (left, right) = apf.detect(img)
+        img = cv2.cvtColor(cv2.imread(p), cv2.COLOR_BGR2RGB)
 
-    f, p = plt.subplots(1,2, figsize=[20,6])
-    p[0].set_title("original")
-    p[0].imshow(img)
-    p[1].set_title("mappedout")
-    p[1].imshow(mapped_img)
-    f.show()
+        mapped_img, (left, right) = apf.detect(img)
+
+        f, p = plt.subplots(1,2, figsize=[20,6])
+        p[0].set_title("original")
+        p[0].imshow(img)
+        p[1].set_title("mappedout")
+        p[1].imshow(mapped_img)
+        f.show()
 
 
 
