@@ -113,7 +113,7 @@ The code presented in code cells 10 of `solution.ipynb`
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+I implemented this step in lines 92 through 101 in my code in `src/Advanced_Path_Finding.py` in the function `detect()`.  Here is an example of my result on a test image:
 
 ![alt text][image6]
 
