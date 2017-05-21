@@ -46,6 +46,7 @@ class APF(object):
         # Convert to a single layer
         warped_img, (src, dst) = warper(img, top_c_shift=self._center_shift, top_v_shift=self._vertical_shift)
         # Detect edges
+        # 1. Define color filters
         gray = cv2.cvtColor(warped_img, cv2.COLOR_RGB2GRAY)
         s = cv2.cvtColor(warped_img, cv2.COLOR_RGB2HLS)[:,:,0]
         sb = np.zeros_like(s, dtype=np.uint8)
@@ -53,35 +54,42 @@ class APF(object):
         y = cv2.cvtColor(warped_img, cv2.COLOR_RGB2YUV)[:, :, 0]
         yb = np.zeros_like(y, dtype=np.uint8)
         yb[(y >= self._y_thresh[0]) & (y < self._y_thresh[1])] = 1
-        #gray_binary = abs_sobel_thresh(gray, thresh=self._thresh, kernel=self._kernel)
+        # 2. Overlay a direction filter
         dir_gradient = dir_threshold(gray,kernel=self._kernel, thresh=self._dir_thresh)
+        # 3. Combine results of color and direction filters
         combined = np.zeros_like(gray, dtype=np.uint8)
-        #combined[((s_binary==1) | (gray_binary==1)) & (dir_gradient==1)] = 1
         combined[((sb == 1) & (dir_gradient == 1)) | (yb == 1)] = 1
+        # 4. Remove noise on the far left side of the image
         combined[:,:250] = 0
 
         # find curvature of the lanes
         try:
-
+            # 1. Find centroids
             centroids = find_window_centroids(combined, self._window_width, self._window_height, self._search_margin)
+            # 2. Get pixels for left and right lines associated with identified centroids
             l_pixels, r_pixels = map_window(combined, centroids, self._window_width, self._window_height)
-
+            # 3. Calculate curve coefficients
             self._left_lane.current_fit = np.polyfit(l_pixels[0], l_pixels[1], 2)
             self._right_lane.current_fit = np.polyfit(r_pixels[0], r_pixels[1], 2)
-            # create curves describing lanes
+            # draw curves describing lanes
             self._left_lane.allx, self._left_lane.ally = plot_2nd_degree_polynomial(self._left_lane.best_fit, warped_img.shape[0])
             self._right_lane.allx, self._right_lane.ally = plot_2nd_degree_polynomial(self._right_lane.best_fit, warped_img.shape[0])
+            # Calculating radius of curvature
             # Find fit in real-world coordinates
             left_fit = np.polyfit(l_pixels[0]*self._y_scaller, l_pixels[1]*self._x_scaller, 2)
             right_fit = np.polyfit(r_pixels[0]*self._y_scaller, r_pixels[1]*self._x_scaller, 2)
+            # Calucate radius
             self._left_lane.radius_of_curvature = R(left_fit, self._left_lane.ally).mean()
             self._right_lane.radius_of_curvature = R(right_fit, self._right_lane.ally).mean()
+            # Assign coordinates of lines
             self._left_lane.line_base_pos = centroids[0][0]
             self._right_lane.line_base_pos = centroids[0][1]
         except:
             self._left_lane.current_fit = self._left_lane.best_fit
             self._right_lane.current_fit = self._right_lane.best_fit
+        # estimate car position
         car_position = (warped_img.shape[1] - self._left_lane.line_base_pos - self._right_lane.line_base_pos) / 2
+        # Visualize result
         binary_filled = visualize_lanes(combined, self._left_lane.ally, self._left_lane.allx, self._right_lane.allx)
         unwarp_binary, (src, dst) = warper(binary_filled, src=dst, dst=src)
         mapped_img = cv2.addWeighted(img, 1, unwarp_binary, 0.3, 0)
@@ -91,11 +99,9 @@ class APF(object):
                                                                          "left" if car_position < 0 \
                                                                              else "right"),
                     (int(mapped_img.shape[1] / 2), 30), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255), thickness=1)
-        """cv2.putText(mapped_img, "Left fit: {}, {}".format(self._left_lane.current_fit, self._left_lane.best_fit),
-                    (5, 60), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), thickness=1)
-        cv2.putText(mapped_img, "Right fit: {}, {}".format(self._right_lane.current_fit, self._right_lane.best_fit),
-                    (5, 90), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), thickness=1)"""
+
         if debug:
+            # Visualize steps for debugging
             mapped_img_ = cv2.resize(mapped_img, (mapped_img.shape[1]//2, mapped_img.shape[0]//2))
             sb = cv2.merge((sb, sb, sb))*255
             sb = cv2.resize(sb, (sb.shape[1]//2, sb.shape[0]//2))
@@ -115,7 +121,10 @@ class APF(object):
 
 
 def main():
-
+    """
+    Test script
+    :return: True if execution was successful
+    """
     from matplotlib import pyplot as plt
 
     test_img_path = ["/Users/aponamaryov/Desktop/test6.png",
