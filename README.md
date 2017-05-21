@@ -45,18 +45,18 @@ To demonstrate this step, I will describe how I apply the distortion correction 
 ![alt text][image2]
 
 Correction of image distortion (created by the camera) is done in 2 steps: a) calculate cameral matrix and distortion coefficients and b) undistort an image using statistics calculated in the step a.
-The first step was implemented in a utility class src/CameraCallibration.py. The script in aforementioned file processed all provided examples (chessboard images) and stored resulting stats in src/calibration.p. Therefore, in advanced_paths_finding.ipynb I focused on the step b).
-Step b) consists of creating an CameraCalibration object and using this object to undistort an image. The code for this step provided in 1 and 2 code cells of the book (advanced_paths_finding.ipynb).
+The first step was implemented in a utility class src/CameraCallibration.py. The script in aforementioned file processed all provided examples (chessboard images) and stored resulting stats in src/calibration.p. Therefore, in solution.ipynb I focused on the step b).
+Step b) consists of creating an CameraCalibration object and using this object to undistort an image. The code for this step provided in 1 and 2 code cells of the book (solution.ipynb).
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps in code cells 5 and 6 in `advanced_paths_finding.ipynb`).  Here's an example of my output for this step.
+I used a combination of color and gradient thresholds to generate a binary image (thresholding steps in code cells 3 through 7 in `solution.ipynb`).  Here's an example of my output for this step.
 
 ![alt text][image3]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 70 through 76 in the file `src/utils.py` and in the 7th code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+The code for my perspective transform includes a function called `warper()`, which appears in lines 71 through 98 in the file `src/utils.py` and in the 7th code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
 
 ```python
 src = np.float32(
@@ -94,7 +94,7 @@ The results are presented below:
 
 ![alt text][image5]
 
-The code presented in code cells 11 and 12 of `advanced_paths_finding.ipynb`
+The code presented in code cell 9 of `solution.ipynb`
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
@@ -106,10 +106,10 @@ R(f(y)) = (1+f(y)'^2)^(2/3) / |f(y)''|, where:
 
 Therefore: R(f(y)) = (1+(2Ay+B)^2)^(2/3) / |2A|
 
-Left radius in meters: 546.2
-Right radius in meters: 564.5
+Left radius in meters: 8139.3 - The size of the curve on straight line may very significantly.
+Right radius in meters: 1802.2
 
-The code presented in code cells 12 of `advanced_paths_finding.ipynb`
+The code presented in code cells 10 of `solution.ipynb`
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
@@ -123,7 +123,7 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result](./output_images/project_video.mp4)
 
 ---
 
@@ -131,4 +131,8 @@ Here's a [link to my video result](./project_video.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+Working on this project I explored many various combinations of color channels and gradients to identify lane lines. The best result was achieved by applying a combination of two color filters and a convolution. This project involved a lot of manual optimization of parameters to achieve a good result.
+
+Although, the resulting pipeline performs tracking well, it is prone to overfitting on a particular type of the road. Additionally, many elements of the natural environment (such as showdown, different texture of the road, weather conditions, and time of the day) may create a significant challenge for the algorithm. In order to overcome this problem, I suggest to use a deep convolutional nets.
+
+Similarly to my approach, convolutional neural nets use filters to identify edges and objects. However, unlike traditional computer vision approached used in this project, CNN's are optimized automatically through the application of gradient descent. This automatic optimization allows to build more sophisticated net structures that will involve far grater number of filters resulting in greater predictive power. In addition, given enough training data CNN's can generalize well, which allows to overcome a problem of noice introduced by natural environment.
