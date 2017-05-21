@@ -8,7 +8,7 @@ import numpy as np
 
 class Lane(object):
     """ Class designed to track lanes"""
-    def __init__(self, name, frames=8, bounds_diffs = np.array([1e-4, 1.0, 100.0], dtype='float')):
+    def __init__(self, name, frames=8, bounds_diffs = np.array([5e-4, 0.2, 100.0], dtype='float')):
         self._frames = frames
         self.__name__=name
         # was the line detected in the last iteration?
@@ -41,19 +41,22 @@ class Lane(object):
     def current_fit(self, value):
         # store value
         self._current_fit=value
-        # add value to the buffer
-        if len(self._recent_xfitted)>=self._frames:
-            self._recent_xfitted.pop(0)
-        self._recent_xfitted.append(value)
         # calculate difference in fit coefficients between last and new fits
         if self.best_fit is not None:
             self._diffs = np.abs(self.best_fit - value)
+        # add value to the buffer
+        if len(self._recent_xfitted) >= self._frames:
+            self._recent_xfitted.pop(0)
         # assign best fit
         # assign current fit if it is in expected bounds
         if self._diffs[0]<self._bounds_diffs[0] and self._diffs[1]<self._bounds_diffs[1]:
-            self.best_fit=value
+            self._recent_xfitted.append(value)
+            self.best_fit=np.array(self._recent_xfitted).mean(axis=0)
         else:
-            self.best_fit = np.array(self._recent_xfitted).mean(axis=0)
+            try:
+                self.best_fit = np.array(self._recent_xfitted).mean(axis=0)
+            except:
+                self.best_fit = value
 
 
 

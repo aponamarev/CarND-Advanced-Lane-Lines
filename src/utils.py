@@ -5,6 +5,7 @@ __author__ = "Alexander Ponamarev"
 __email__ = "alex.ponamaryov@gmail.com"
 
 import numpy as np
+from matplotlib import pyplot as plt
 import cv2
 
 def abs_sobel_thresh(img, orient='x', kernel=3, thresh=(0,255)):
@@ -61,10 +62,10 @@ def dir_threshold(img, kernel=3, thresh=(0, np.pi / 2)):
     # Take the absolute value of the gradient direction,
     # apply a threshold, and create a binary image result
     absgraddir = np.arctan2(np.absolute(sobely), np.absolute(sobelx))
-    mask = np.zeros_like(absgraddir)
+    mask = np.zeros_like(absgraddir, dtype=np.uint8)
     mask[(absgraddir >= thresh[0]) & (absgraddir <= thresh[1])] = 1
     # 6) Return this mask as your binary_output image
-    return np.uint8(mask)
+    return mask
 
 
 def warper(img, src=None, dst=None, top_c_shift = 45, top_v_shift = 90):
@@ -110,10 +111,10 @@ def window_mask(width, height, img_ref, center, level):
     return output
 
 
-def find_window_centroids(image, window_width, window_height, margin):
+def find_window_centroids(image, window_width, window_height, margin, limit=10):
     window_centroids = []  # Store the (left,right) window centroid positions per level
-    window = np.ones(window_width)  # Create our window template that we will use for convolutions
-    offset = window_width
+    window = [i for i in range(1,window_width//2+2)] + [i for i in range(window_width//2,0,-1)]  # Create our window template that we will use for convolutions
+    offset = window_width/2
 
     # First find the two starting positions for the left and right lane by using np.sum to get the vertical image slice
     # and then np.convolve the vertical image slice with the window template
@@ -122,8 +123,10 @@ def find_window_centroids(image, window_width, window_height, margin):
     l_sum = np.sum(image[int(3 * image.shape[0] / 4):, :int(image.shape[1] / 2)], axis=0)
     # Calculate the center (x coordinate) for left lane
     l_center = np.argmax(np.convolve(window, l_sum)) - offset
+    #l_center = np.argmax(np.convolve(window, l_sum))
     r_sum = np.sum(image[int(3 * image.shape[0] / 4):, int(image.shape[1] / 2):], axis=0)
     r_center = np.argmax(np.convolve(window, r_sum)) - offset + int(image.shape[1] / 2)
+    #r_center = np.argmax(np.convolve(window, r_sum)) + int(image.shape[1] / 2)
 
     # Add what we found for the first layer
     window_centroids.append((l_center, r_center))
@@ -138,53 +141,61 @@ def find_window_centroids(image, window_width, window_height, margin):
         # Use _window_width/2 as offset because convolution signal reference is at right side of window, not center of window
         conv_signal = np.convolve(window, image_layer)
 
-        l_min_index = int(max(l_center - margin, 0))
-        l_max_index = int(min(l_center + margin, image.shape[1]))
-        l_center = np.argmax(conv_signal[l_min_index:l_max_index]) + l_min_index - offset
+        l_min_index = int(max(l_center+offset - margin, 0))
+        l_max_index = int(min(l_center+offset + margin, image.shape[1]))
+        l_conv = conv_signal[l_min_index:l_max_index]
+        if l_conv.max()>limit:
+            l_center = np.argmax(l_conv) + l_min_index - offset
+            #l_center = np.argmax(l_conv) + l_min_index
+        else:
+            l_center = None
         # Find the best right centroid by using past right center as a reference
-        r_min_index = int(max(r_center + offset - margin, 0))
-        r_max_index = int(min(r_center + offset + margin, image.shape[1]))
-        r_center = np.argmax(conv_signal[r_min_index:r_max_index]) + r_min_index - offset
+        r_min_index = int(max(r_center+offset - margin, 0))
+        r_max_index = int(min(r_center+offset + margin, image.shape[1]))
+        r_conv = conv_signal[r_min_index:r_max_index]
+        if r_conv.max() > limit:
+            r_center = np.argmax(r_conv) + r_min_index - offset
+            #r_center = np.argmax(r_conv) + r_min_index
+        else:
+            r_center = None
+        if (l_center is None) & (r_center is None):
+            l_center, r_center = window_centroids[-1]
+        else:
+            l_center = r_center - (window_centroids[-1][1]-window_centroids[-1][0]) if l_center is None else l_center
+            r_center = l_center + (window_centroids[-1][1] - window_centroids[-1][0]) if r_center is None else r_center
         # Add what we found for that layer
         window_centroids.append((l_center, r_center))
 
     return np.int32(window_centroids)
 
-def map_window(binary_warped_img, window_width=50, window_height=120, search_margin=100):
-
-    window_centroids = find_window_centroids(binary_warped_img, window_width, window_height, search_margin)
+def map_window(warped_img, window_centroids, window_width, window_height):
 
     # If we found any window centers
     if len(window_centroids) > 0:
 
         # Points used to draw all the left and right windows
-        l_points = np.zeros_like(binary_warped_img)
-        r_points = np.zeros_like(binary_warped_img)
+        l_points = np.zeros_like(warped_img)
+        r_points = np.zeros_like(warped_img)
 
         # Go through each level and draw the windows
         for level in range(0, len(window_centroids)):
             # Window_mask is a function to draw window areas
-            l_mask = window_mask(window_width, window_height, binary_warped_img, window_centroids[level][0], level)
-            r_mask = window_mask(window_width, window_height, binary_warped_img, window_centroids[level][1], level)
+            l_mask = window_mask(window_width, window_height, warped_img, window_centroids[level][0], level)
+            r_mask = window_mask(window_width, window_height, warped_img, window_centroids[level][1], level)
             # Add graphic points from window mask here to total pixels found
             l_points[(l_points == 255) | ((l_mask == 1))] = 255
             r_points[(r_points == 255) | ((r_mask == 1))] = 255
 
-        # Draw the results
-        template = np.array(r_points + l_points, np.uint8)  # add both left and right window pixels together
-        zero_channel = np.zeros_like(template)  # create a zero color channel
-        template = np.array(cv2.merge((zero_channel, template, zero_channel)), np.uint8)  # make window pixels green
-        warpage = np.array(cv2.merge((binary_warped_img, binary_warped_img, binary_warped_img)),
-                           np.uint8)  # making the original road pixels 3 color channels
-        # overlay the original road image with window results
-        output = cv2.addWeighted(warpage, 1, template, 0.5, 0.0)
+        l_points = np.where(((warped_img>0) & (l_points>0)).astype(l_points.dtype))
+        r_points = np.where(((warped_img > 0) & (r_points > 0)).astype(r_points.dtype))
 
 
     # If no window centers found, just display orginal road image
     else:
-        output = np.array(cv2.merge((binary_warped_img, binary_warped_img, binary_warped_img)), np.uint8)
+        l_points = []
+        r_points = []
 
-    return output, window_centroids
+    return l_points, r_points
 
 def fit_polynomial(x, y_size, x_scaller=1.0, y_scaller=1.0, degree=2):
 
